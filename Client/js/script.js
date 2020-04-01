@@ -7,7 +7,7 @@ function setTabel() {
     document.getElementById("taskFilter").value = category;
 
     var httpRequest = new XMLHttpRequest();
-    const url = "http://localhost:8080/task" + (category != null ? "?category=" + category : "");
+    const url = "http://localhost:8080/task/category/" + (category != null ? "?category=" + category : "");
     httpRequest.open("GET", url,true);
     httpRequest.send();
     httpRequest.onreadystatechange = function () {
@@ -70,7 +70,7 @@ function deleteTask() {
     const taskID = event.srcElement.getAttribute('data-id');
     
     var httpRequest = new XMLHttpRequest();
-    const url = "http://localhost:8080/task/" + taskID; 
+    const url = "http://localhost:8080/task/id/" + taskID; 
     httpRequest.open("DELETE", url,true);
     httpRequest.send();
     httpRequest.onreadystatechange = function () {

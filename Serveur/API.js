@@ -38,15 +38,17 @@ app.use((req, res, next) => {
   * Récupère l'ensemble des tâches, et les retourne sous la forme d'un objet JSON
   * Méthode : GET
   * Exemples de requêtes :
-  *     localhost/task => Retourn l'ensemble des tâches non achevées et non annulées qui ne sont pas arrivées à échéance.
-  *     localhost/task?category=web => Retourn l'ensemble des tâches avec pour tags "web"
+  *     localhost/task/category => Retourn l'ensemble des tâches non achevées et non annulées qui ne sont pas arrivées à échéance.
+  *     localhost/task/category/web => Retourn l'ensemble des tâches avec pour tags "web"
   */
-app.get('/task', (req,res) => {
+app.get('/task/category/:category?', (req,res) => {
+    // Le "?" après "category" permet de définir que la catégorie est optionnelle 
+
     // Création d'un nouveau service permettant de retourner plusieurs tâches à la fois 
-    const category = req.query.category;
+    const category = req.params.category;
 
     // Si aucune catégorie n'est passée via GET, retourne l'ensemble des tâches non annulées et non achevées toujours actives 
-    if (category == undefined) {
+    if (category == "running") {
 
         // Récupère l'ensemble des ces tâches 
         con.query(`SELECT * FROM task WHERE taskState != 'finished' AND taskState != 'cancelled' AND dateEnd >= CURDATE();`, function (error, results, fields) {
@@ -161,7 +163,7 @@ app.get('/task', (req,res) => {
   * Exemple de requête :
   *     localhost/task/1 => Retourn la tâche avec pour ID 1
   */
-.get('/task/:id',(req,res) => {
+.get('/task/id/:id',(req,res) => {
 
     // Récupère l'ID dans l'URL
     const taskId = parseInt(req.params.id);
