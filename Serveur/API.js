@@ -15,8 +15,6 @@ var con = mysql.createConnection({
 const validCategories = ['other','test','web','work','youpi'];
 const validTaskStatus = ['running','finished','cancelled','unknow','task requested']; 
 
-// TODO: Changer les requetes vers la BDD
-
 // Body parsing
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
@@ -27,7 +25,7 @@ app.use(bodyParser.json());
  */
 
 app.use((req, res, next) => {
-    res.setHeader('Access-Control-Allow-Origin', '*'); //FIXME: 
+    res.setHeader('Access-Control-Allow-Origin', '*'); 
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
     res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,content-type');
 
@@ -40,130 +38,57 @@ app.use((req, res, next) => {
   * Exemples de requêtes :
   *     localhost/task/category => Retourn l'ensemble des tâches non achevées et non annulées qui ne sont pas arrivées à échéance.
   *     localhost/task/category/web => Retourn l'ensemble des tâches avec pour tags "web"
+  *     localhost/task/category/all => Retourn l'ensemble des tâches existantes
   */
-app.get('/task/category/:category?', (req,res) => {
+app.get('/task/category/:category?', async (req,res) => {
     // Le "?" après "category" permet de définir que la catégorie est optionnelle 
 
     // Création d'un nouveau service permettant de retourner plusieurs tâches à la fois 
     const category = req.params.category;
 
+    let request = `SELECT task.id, title, dateBegin, dateEnd, taskState, category AS tags 
+        FROM task LEFT OUTER JOIN (SELECT id, GROUP_CONCAT(category) as category FROM link GROUP BY id) AS link ON link.id=task.id `
+
     // Si aucune catégorie n'est passée via GET, retourne l'ensemble des tâches non annulées et non achevées toujours actives 
-    if (category == "running") {
-
-        // Récupère l'ensemble des ces tâches 
-        con.query(`SELECT * FROM task WHERE taskState != 'finished' AND taskState != 'cancelled' AND dateEnd >= CURDATE();`, function (error, results, fields) {
-            // En cas d'erreur, répond au client et log l'erreur
-            if (error) {
-                manageSqlError(res,error);
-                return;
-            }
-            // Si aucune tâche ne correspond aux caractéristiques, retourne un tableau vide
-            if (results.length == 0) {
-                res.json(results);
-                return;
-            };
-
-            let taskQueryResult = results;
-            
-            let listID = [];
-            let idToCategories = new Map();
-
-            // Pour chacun des tuples retournés, stocke son ID et initialise un tableau, dans la map "idToCategories", qui servira à stocker ses catégories 
-            taskQueryResult.forEach(task => {
-                listID.push(task.id);
-                idToCategories.set(task.id,[])
-            })
-
-            // Récupère les catégories liées aux différentes tâches récupérées précédemment 
-            con.query(`SELECT * FROM link WHERE id IN (${listID.join(',')});`, function (error, results, fields) {
-                if (error) { 
-                    manageSqlError(res,error);
-                    return;
-                }
-
-                const linkQueryResult = results;
-                // Pour chaque tuple, ajoute la catégorie récupérée à la liste stockée dans la map.
-                linkQueryResult.forEach(row => {
-                    idToCategories.get(row.id).push(row.category);
-                });
-
-
-                // Corrige l'objet JSON obtenue avec la 1er requpête pour y ajoutant les tags liée aux tâches et modifiant le format des dates
-                taskQueryResult.forEach(task => {
-                    task['tags'] = idToCategories.get(task.id);
-                    console.log(task['dateBegin'])
-                    task['dateBegin'] = dateFormat(task['dateBegin'], "yyyy-mm-dd");
-                    task['dateEnd'] = dateFormat(task['dateEnd'], "yyyy-mm-dd");
-                });
-
-                res.send(taskQueryResult);
-
-            });
-
-        });
-
-    // Si une catégorie est passée par paramètre GET (ex : /task?category=web) ...
+    if (category == undefined) {
+        request += `WHERE taskState NOT IN ('finished','cancelled') AND dateEnd >= CURDATE();`;
+    } else if (category == 'all') {
+        request += ';';
     } else {
-        // Récupère l'ID et les catégories de toutes les tâches ayant pour catégorie la valeur de "category"
-        con.query(`SELECT L1.id AS id, L2.category AS category FROM link as L1 LEFT OUTER JOIN link as L2 ON L1.id = L2.id WHERE L1.category="${category}"`,
-            (error, results, fields) => {
-
-            if (error) {
-                manageSqlError(res,error); 
-                return;
-            }
-
-            // Si le résultat est vide ou si la catégorie demandée n'existe pas, retourne un élément vide
-            if (results.length == 0) {
-                res.json(results);
-                return;
-            };
-            
-            let linkQueryResult = results;
-
-            let listID = [];
-            let idToCategories = new Map();
-
-            // Pour chacun des tuples retournés, stocke son ID et initialise un tableau, dans la map "idToCategories", qui servira à stocker ses catégories 
-            linkQueryResult.forEach(row => {
-                if (idToCategories.has(row.id)) {
-                    idToCategories.get(row.id).push(row.category)
-                } else {
-                    listID.push(row.id);
-                    idToCategories.set(row.id,[row.category])
-                }
-            })
-
-
-            // Récupère l'ensemble des tâches par rapport aux différents id obtenues plus tôt
-            con.query(`SELECT * FROM task WHERE id IN (${listID.join(',')});`, function (error, results, fields) {
-                if (error) {
-                    manageSqlError(res,error);
-                    return;
-                }
-
-                const taskQueryResult = results;
-                
-                // Corrige l'objet JSON obtenue pour y ajoutant les tags liés aux tâches et modifiant le format des dates
-                taskQueryResult.forEach(task => {
-                    task['tags'] = idToCategories.get(task.id);
-                    task['dateBegin'] = dateFormat(task['dateBegin'], "yyyy-mm-dd");
-                    task['dateEnd'] = dateFormat(task['dateEnd'], "yyyy-mm-dd");
-                });
-
-                res.send(taskQueryResult);
-            });
-        });
+        request += `WHERE link.category LIKE '%${category}%';`
     }
+
+    // Récupère l'ensemble des ces tâches 
+    await dbQuery(request).then((result) => {
+        
+        let jsonTaskList = result.length != 0 ? result : [];        
+        
+        // Corrige l'objet JSON obtenue pour qu'il soit conforme aux attentes
+        jsonTaskList.forEach(task => {
+    
+            if (task['tags'] == null) {
+                task['tags'] =[]
+            } else {
+                task['tags'] = task['tags'].split(',');
+            }
+            task['dateBegin'] = dateFormat(task['dateBegin'], "yyyy-mm-dd");
+            task['dateEnd'] = dateFormat(task['dateEnd'], "yyyy-mm-dd");
+        });
+    
+        res.send(jsonTaskList);
+
+    }).catch((error) => {
+        manageSqlError(res,error);
+    })
 
 })
  /**
   * Récupère une tâche grâce à son ID et la retourne sous la forme d'un objet JSON
   * Méthode : GET
   * Exemple de requête :
-  *     localhost/task/1 => Retourn la tâche avec pour ID 1
+  *     localhost/task/id/1 => Retourn la tâche avec pour ID 1
   */
-.get('/task/id/:id',(req,res) => {
+.get('/task/id/:id',async (req,res) => {
 
     // Récupère l'ID dans l'URL
     const taskId = parseInt(req.params.id);
@@ -171,43 +96,30 @@ app.get('/task/category/:category?', (req,res) => {
     // Vérifie si le paramète ID est bien un nombre
     if ( !isNaN(taskId) ) {
 
+        let request = `SELECT task.id, title, dateBegin, dateEnd, taskState, category AS tags 
+            FROM task LEFT OUTER JOIN (SELECT id, GROUP_CONCAT(category) as category FROM link GROUP BY id) AS link ON link.id=task.id WHERE task.id=${taskId};`
+
         // Récupère la tâche lié à cet ID
-        con.query(`SELECT * FROM task WHERE id=${taskId};`, function (error, results, fields) {
-            if (error) {
-                manageSqlError(res,error);
-                return;
-            } 
+        await dbQuery(request).then((result) => {
 
-            // Si cet ID ne correspond à aucune tâche => retourne une erreur 
-            if (results.length == 0) {
+            
+            if (result.length == 0) {
                 res.status(400).send('Invalid task ID');
-
-            // Sinon : récupère l'ensemble de ses tags pour les ajoutes dans l'objet JSON et corrige le format des dates  
             } else {
+                let task = result[0]
 
-                let taskJSON = results[0];
-
-                con.query(`SELECT category FROM link WHERE id=${taskId};`, function (error, results, fields) {
-                    if (error) {
-                        manageSqlError(res,error);
-                        return;
-                    } 
-
-                    let listTags = [];
-                    results.forEach(element => {
-                        listTags.push(element.category);
-                    });
-                    taskJSON['dateBegin'] = dateFormat(taskJSON['dateBegin'], "yyyy-mm-dd");
-                    taskJSON['dateEnd'] = dateFormat(taskJSON['dateEnd'], "yyyy-mm-dd");
-                    taskJSON['tags'] = listTags;
-                    
-                    // Envoie la tâche sous la forme d'un objet JSON
-                    res.send(taskJSON);
-                });
-
+                task['dateBegin'] = dateFormat(task['dateBegin'], "yyyy-mm-dd");
+                task['dateEnd'] = dateFormat(task['dateEnd'], "yyyy-mm-dd");
+                task['tags'] = task['tags'].split(',');
+                
+                // Envoie la tâche sous la forme d'un objet JSON
+                res.send(task);
             }
 
-        });
+        }).catch((error) => {
+            manageSqlError(res,error);
+        })
+
 
     // Si l'ID n'est pas un nombre, retourne une erreur 400 : "Bad Request". 
     } else {
@@ -228,7 +140,7 @@ app.get('/task/category/:category?', (req,res) => {
   *     "tags":["web"]
   * }
   */
-.post('/task',(req, res) => {
+.post('/task',async (req, res) => {
 
     // Récupère l'élément JSON passé en paramètre de la requête
     const task = req.body;
@@ -236,43 +148,38 @@ app.get('/task/category/:category?', (req,res) => {
     // Si l'élement JSON est bein formé, ajoute la tâche en BDD
     if (isValidJsonTask(req.body)) {
 
-        con.query(
-            `INSERT INTO task (title, dateBegin, dateEnd, taskState) 
-            VALUES ('${task.title}', '${task.dateBegin}', '${task.dateEnd}', '${task.state}');`,
-            function (error, results, fields) {
-                
-            if (error) {
+
+        let insertTask = `INSERT INTO task (title, dateBegin, dateEnd, taskState) 
+        VALUES ('${task.title}', '${task.dateBegin}', '${task.dateEnd}', '${task.state}');`
+    
+        let taskID;
+        await dbQuery(insertTask).then((result) => {
+            // Récupère l'ID de tâche généré automatique par la BDD 
+            taskID = result.insertId;
+        }).catch((error) => {
+            manageSqlError(res,error);
+            // Si il ya une erreure, ne fait pas la suite
+            return;
+        })
+
+        // Liste des tuples à ajouter à la table "link" de la BDD
+        let listRowValue = []
+
+        // new Set(task.tags) : Transforme une liste en Set afin de supprimer les doublons
+        new Set(task.tags).forEach(element => {
+            listRowValue.push(`(${taskID}, '${element}')`);
+        });
+
+        let insertLink = `INSERT INTO link VALUES ${listRowValue.join(',')} ;`
+
+        if (listRowValue.length != 0) {
+            await dbQuery(insertLink).catch((error) => {
                 manageSqlError(res,error);
                 return;
-            } 
+            })
+        }
 
-            // Récupère l'ID de tâche généré automatique par la BDD 
-            const taskId = results.insertId;
-
-            // Liste des tuples à ajouter à la table "link" de la BDD
-            let listRowValue = []
-            
-            // Tolèrent sur les tags. Peut contenir plusieurs fois le même tag
-            // new Set(task.tags) : Transforme une liste en Set afin de supprimer les doublons
-            new Set(task.tags).forEach(element => {
-                listRowValue.push(`(${taskId}, '${element}')`);
-            });
-
-            // Si la liste n'est pas vide, ajouter les éléments à la table, puis, dans tous les cas, envoyer la réponse au client
-            // Peut ajouter plusieurs tuples à la fois dans la BDD.
-            if (listRowValue.length != 0 ) {
-                con.query(`INSERT INTO link VALUES ${listRowValue.join(',')} ;`, function (error, results, fields) {
-                    if (error) {
-                        manageSqlError(res,error);
-                        return;
-                    } 
-                    res.send('Task launched');
-                });
-            } else {
-                res.send('Task launched');
-            }
-
-        });
+        res.send('Task launched');
 
     // Si l'élement JSON est mal formé, retourne une erreur 400 : "Bad Request".  
     } else {
@@ -286,7 +193,9 @@ app.get('/task/category/:category?', (req,res) => {
   * Exemple de requête :
   *     localhost/task/1 => Supprime la tâche avec pour ID 1
   */
-.delete('/task/:id',(req,res) => {
+.delete('/task/:id', async (req,res) => {
+
+
 
     // Récupère l'ID dans l'URL
     const taskId = parseInt(req.params.id);
@@ -295,13 +204,12 @@ app.get('/task/category/:category?', (req,res) => {
     if ( !isNaN(taskId) ) {
 
         // Supprime la tâche lié à cet ID
-        con.query(`DELETE FROM task WHERE id=${taskId};`, function (error, results, fields) {
-            if (error) {
-                manageSqlError(res,error);
-                return;
-            }
+        await dbQuery(`DELETE FROM task WHERE id=${taskId};`).then((result) => {
             res.send('Task deleted');
-        });
+        }).catch((error) => {
+            manageSqlError(res,error);
+        })
+
 
     // Si l'ID n'est pas un nombre => retourne une erreur 400 : "Bad Request". 
     } else {
@@ -323,7 +231,7 @@ app.get('/task/category/:category?', (req,res) => {
   *     "tags":["web"]
   * }
   */
-.put('/task/:id',(req,res) => {
+.put('/task/:id',async (req,res) => {
 
     // Récupère l'élément JSON, passé en paramètre POST, ainsi que l'ID de la tâche à modifier, passé en paramètre GET
     const task = req.body;
@@ -333,75 +241,68 @@ app.get('/task/category/:category?', (req,res) => {
     if (isValidJsonTask(req.body) && !isNaN(taskId)) {
 
         // Met à jour le tuple de la table "task" lié à l'ID passé en paramètre  
-        con.query( 
-            `UPDATE task 
-            SET title='${task.title}', dateBegin='${task.dateBegin}', 
-                dateEnd='${task.dateEnd}', taskState = '${task.state}' 
-            WHERE id = ${taskId};`,
-            (error, results, fields) => {
+        const updateTask = `UPDATE task SET title='${task.title}', dateBegin='${task.dateBegin}',
+         dateEnd='${task.dateEnd}', taskState = '${task.state}' WHERE id = ${taskId};`;
+
+        await dbQuery(updateTask).catch((error) => {
+            manageSqlError(res,error);
+            return;
+        })
+
+        let listDeleteCategories = [];
+        let listAddCategories = [];
+
+        // Retourne l'ensemble des catégories de taskId 
+        const selectLink = `SELECT category FROM link WHERE id=${taskId};`;
+
+        await dbQuery(selectLink).then((result) => {
+            let listCategories= [];
+            result.forEach(e => {
+                listCategories.push(e.category);
+            })
+
+            // Récupère la liste des catégories n'étant plu affecté à la tâche (listDeleteCategory)
+            // Récupère la liste des catégories à affecté à la tâche (listAddCategory)
+            listDeleteCategories = listCategories.filter(x => !task.tags.includes(x));
+            listAddCategories = task.tags.filter(x => !listCategories.includes(x));
+
+
+        }).catch((error) => {
+            manageSqlError(res,error);
+            return;
+        })
+
+        // S'il y a des catégories à supprimer => les supprimes
+        if (listDeleteCategories.length != 0) {
+            listDeleteCategories.forEach((e,id,currentArray) => {
+                currentArray[id] = '"' + e + '"';
+            });
+
+            const deleteLink = `DELETE FROM link WHERE id=${taskId} AND category IN (${listDeleteCategories.join(',')});`;
+   
+            await dbQuery(deleteLink).catch((error) => {
+               manageSqlError(res,error);
+               return;
+           })
+        }
+
+        // S'il y a des catégories à ajotuer => les ajoutes
+        if (listAddCategories.length != 0) {
+            listAddCategories.forEach((e,id,currentArray) => {
+                currentArray[id] = `(${taskId},"${e}")`;
+            });
             
-            if (error) {
+            const insetLink = `INSERT INTO link VALUES ${listAddCategories.join(',')};`
+
+            console.log(insetLink)
+
+            await dbQuery(insetLink).catch((error) => {
                 manageSqlError(res,error);
                 return;
-            }
+            })
+        }
 
-            // Retourne l'ensemble des catégories de taskId 
-            con.query(`SELECT category FROM link WHERE id=${taskId};`, function (error, results, fields) {
-                if (error) {
-                    manageSqlError(res,error);
-                    return;
-                } 
-
-                // Récupère ses catégories et les ajoute au tableau "listCategories"
-                let listCategories= [];
-                results.forEach(e => {
-                    listCategories.push(e.category);
-                })
-
-                // Récupère la liste des catégories n'étant plu affecté à la tâche (listDeleteCategory)
-                // Récupère la liste des catégories à affecté à la tâche (listAddCategory)
-                let listDeleteCategories = results.length == 0 ? [] :  listCategories.filter(x => !task.tags.includes(x));
-                let listAddCategories = results.length == 0 ? [] : task.tags.filter(x => !listCategories.includes(x));
-
-                // S'il y a des catégories à supprimer => les supprimes
-                if (listDeleteCategories.length != 0) {
-
-                    // Formate les catégories pour pouvoir les ajouter à la requête
-                    let deleteCategories = [];
-                    listDeleteCategories.forEach(e => {
-                        deleteCategories.push(`"${e}"`);
-                    });
-    
-                    // Supprime les tuples de la table "link" inutiles.
-                    con.query(`DELETE FROM link WHERE id=${taskId} AND category IN (${deleteCategories.join(',')});`, function (error, results, fields) {
-                        if (error) {
-                            manageSqlError(res,error);
-                            return;
-                        } 
-    
-                        // S'il y a des catégories à ajotuer, les ajoutes
-                        if (listAddCategories.length != 0 ) {
-                            insertLinkTabel(res, taskId, listAddCategories);
-                           
-                        // Sinon répondre au client
-                        } else {
-                            res.send('Task updated');
-                        }  
-                    });
-
-                // Sinon S'il y a des catégories à ajotuer, les ajoutes
-                } else if (listAddCategories.length != 0) {
-
-                    insertLinkTabel(res, taskId, listAddCategories);
-
-                // Sinon répondre au client
-                } else {
-                    res.send('Task updated');
-                }
-
-
-            });
-        });
+        res.send('Task updated');
 
     // Si l'élément JSON est mal formé, retourne une erreur 400 : "Bad Request".  
     } else {
@@ -451,25 +352,21 @@ function isValidDate(stringDate) {
     return listElement.length == 3 && (parseInt(listElement[2]) <= 31 && parseInt(listElement[1]) <= 12 && !isNaN(parseInt(listElement[0])));
 }
 
-
-function insertLinkTabel(res, taskId, listCategory) {
-    // Met en forme les éléments à ajouter à la table "lien"
-    let addCategory = [];
-    listCategory.forEach(e => {
-        addCategory.push(`(${taskId},"${e}")`);
-    });
-
-    //Ajoute les nouveaux liens
-    con.query(`INSERT INTO link VALUES ${addCategory.join(',')};`, function (error, results, fields) {
-        if (error) {
-            manageSqlError(res,error);
-            return;
-        } 
-        res.send('Task updated');
-    });
-}
-
 function manageSqlError(res,err) {
     res.status(500).send("Server Error. Thanks to try again latter");
     console.log(err);
 }
+
+
+function dbQuery(query) {
+    return new Promise((resolve, reject) => {
+        con.query(query, (error, results, fields) => {
+            if(error) {
+                reject(error);
+            }else {
+                resolve(results);
+            }
+        });
+    });
+}
+

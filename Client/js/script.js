@@ -4,10 +4,10 @@ function setTabel() {
     var url_string = window.location.href
     var category = new URL(url_string).searchParams.get("category");
 
-    document.getElementById("taskFilter").value = category;
+    document.getElementById("taskFilter").value = category == null ? "running" : category;
 
     var httpRequest = new XMLHttpRequest();
-    const url = "http://localhost:8080/task/category/" + (category != null ? "?category=" + category : "");
+    const url = "http://localhost:8080/task/category/" + (category != null ? category : "");
     httpRequest.open("GET", url,true);
     httpRequest.send();
     httpRequest.onreadystatechange = function () {
@@ -16,6 +16,7 @@ function setTabel() {
                 const json = JSON.parse(httpRequest.responseText);
                 jsonToTable(json);
             } else {
+                console.log(httpRequest.responseText)
                 alert("Invalid Request, can't get task list.");
             }
         }
@@ -70,7 +71,7 @@ function deleteTask() {
     const taskID = event.srcElement.getAttribute('data-id');
     
     var httpRequest = new XMLHttpRequest();
-    const url = "http://localhost:8080/task/id/" + taskID; 
+    const url = "http://localhost:8080/task/" + taskID; 
     httpRequest.open("DELETE", url,true);
     httpRequest.send();
     httpRequest.onreadystatechange = function () {
@@ -128,11 +129,11 @@ function addTask() {
 
 function modifyTask() {
     let tags = [];
-    if (document.getElementById("tagOther").checked == true) tags.push("\"other\"");
-    if (document.getElementById("tagTest").checked == true) tags.push("\"test\"");
-    if (document.getElementById("tagWeb").checked == true) tags.push("\"web\"");
-    if (document.getElementById("tagWork").checked == true) tags.push("\"work\"");
-    if (document.getElementById("tagYoupi").checked == true) tags.push("\"youpi\"");
+    if (document.getElementById("tagOtherM").checked == true) tags.push("\"other\"");
+    if (document.getElementById("tagTestM").checked == true) tags.push("\"test\"");
+    if (document.getElementById("tagWebM").checked == true) tags.push("\"web\"");
+    if (document.getElementById("tagWorkM").checked == true) tags.push("\"work\"");
+    if (document.getElementById("tagYoupiM").checked == true) tags.push("\"youpi\"");
 
     let jsonObj = `{
         "title" : "${document.getElementById("taskTitleM").value}",
@@ -174,13 +175,10 @@ function setModifyTaskPopUp(){
     if(event.srcElement.getAttribute('data-tags').includes("work")) document.getElementById("tagWorkM").checked = true;
     if(event.srcElement.getAttribute('data-tags').includes("youpi")) document.getElementById("tagYoupiM").checked = true;
 
-    console.log(event.srcElement.getAttribute('data-state'))
-    console.log("OK")
 }
 
 function filterTask() {
     const category = document.getElementById("taskFilter").value;
     const url = window.location.href.split('?')[0] + (category == "running" ? "" : "?category=" + category);
-    console.log(url)
     document.location.href=url;
 }
