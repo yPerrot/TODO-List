@@ -1,0 +1,29 @@
+{
+
+  "manifest_version": 2,
+  "name": "Task_Manager",
+  "version": "1.0",
+
+  "description": "Adds a browser action icon to the toolbar. Click the button to show current tasks",
+  "icons": {
+    "48": "icons/default.png"
+  },
+
+  "permissions": [
+    "<all_urls>",
+    "webRequest",
+    "activeTab"
+  ],
+
+  "browser_action": {
+    "default_icon": "icons/default.png",
+    "default_title": "Task Manager",
+    "default_popup": "popup/index.html"
+  }, 
+
+  "web_accessible_resources": [
+    "resources/*",
+    "icons/default.png"
+  ]
+
+}

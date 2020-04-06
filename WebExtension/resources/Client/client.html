@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+	<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+	
+	<!-- Bootstrap CSS -->
+	<link rel="stylesheet" href="./css/bootstrap.min.css">
+    <!-- <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous"> -->
+	
+	<!-- Bootstrap JS -->
+	<!-- <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js"></script> -->
+	<script src="./js/jquery.min.js"></script>
+	<script src="./js/popper.min.js"></script>
+	<script src="./js/bootstrap.min.js"></script>
+	
+	<script src="./js/script.js"></script>
+	
+	<title>Task Manager - Yohan PERROT</title>
+  </head>
+  <body>
+
+	<nav class="navbar navbar-light" style="background-color: #e3f2fd;">
+		<span class="navbar-brand mb-0 h1">Task Manager</span>
+		<button type="button" class="btn btn-primary" data-toggle="modal" data-target="#addModal">Add new task</button>
+	</nav>
+
+	<main>
+
+		<div class="container">
+
+			<div class="modal" id="addModal">
+			<div class="modal-dialog">
+				<div class="modal-content">
+				
+				<div class="modal-header">
+					<h4 class="modal-title">Add new task</h4>
+					<button type="button" class="close" data-dismiss="modal">&times;</button>
+				</div>
+				
+				<!-- Modal body -->
+				<div class="modal-body">
+					<form>
+
+						<div class="form-group row">
+							<label for="taskTitle" class="col-sm-2 col-form-label">Title</label>
+							<div class="col-sm-10">
+								<input type="text" class="form-control" id="taskTitle" placeholder="Title" >
+							</div>
+						</div>
+
+						<div class="form-group row">
+							<label for="taskDateBegin" class="col-sm-2 col-form-label">DateBegin</label>
+							<div class="col-sm-10">
+								<input type="date" id ="taskDateBegin" name="bday" max="3000-12-31" min="1000-01-01" class="form-control" >
+							</div>
+						</div>
+
+						<div class="form-group row">
+							<label for="taskDateEnd" class="col-sm-2 col-form-label">DateEnd</label>
+							<div class="col-sm-10">
+								<input type="date" id ="taskDateEnd" name="bday" max="3000-12-31" min="1000-01-01" class="form-control">
+							</div>
+						</div>
+
+						<div class="form-group row">
+							<label for="taskState" class="col-sm-2 col-form-label">State</label>
+							<div class="col-sm-10">
+								<select class="form-control" id="taskState">
+									<option value="running">Running</option>
+									<option value="unknow">Unknow</option>
+									<option value="finished">Finished</option>
+									<option value="Cancelled">Cancelled</option>
+									<option value="task requested">Task requested</option>
+								</select>
+							</div>
+						</div>
+
+						<div class="form-group row">
+							<label for="taskTag" class="col-sm-2 col-form-label">Tags</label>
+							<div class="col-sm-10">
+								<div class="form-check form-check-inline">
+									<input class="form-check-input" type="checkbox" name="inlineRadioOptions" id="tagOther" value="other">
+									<label class="form-check-label" for="tagOther">Other</label>
+								</div>
+								<div class="form-check form-check-inline">
+									<input class="form-check-input" type="checkbox" name="inlineRadioOptions" id="tagTest" value="test">
+									<label class="form-check-label" for="tagTest">Test</label>
+								</div>
+								<div class="form-check form-check-inline">
+									<input class="form-check-input" type="checkbox" name="inlineRadioOptions" id="tagWeb" value="web">
+									<label class="form-check-label" for="tagWeb">Web</label>
+								</div>
+								<div class="form-check form-check-inline">
+									<input class="form-check-input" type="checkbox" name="inlineRadioOptions" id="tagWork" value="work">
+									<label class="form-check-label" for="tagWork">Work</label>
+								</div>
+								<div class="form-check form-check-inline">
+									<input class="form-check-input" type="checkbox" name="inlineRadioOptions" id="tagYoupi" value="youpi">
+									<label class="form-check-label" for="tagYoupi">Youpi</label>
+								</div>
+							</div>
+						</div>
+						
+					</form>
+				</div>
+				
+				<div class="modal-footer">
+					<button type="button" class="btn btn-success" data-dismiss="modal" onclick="addTask()">Send</button>
+					<button type="button" class="btn btn-danger" data-dismiss="modal">Close</button>
+				</div>
+				
+				</div>
+			</div>
+			</div>
+
+
+			<div class="modal" id="modifyModal">
+				<div class="modal-dialog">
+					<div class="modal-content">
+					
+					<div class="modal-header">
+						<h4 class="modal-title">Modify task</h4>
+						<button type="button" class="close" data-dismiss="modal">&times;</button>
+					</div>
+					
+					<!-- Modal body -->
+					<div class="modal-body">
+						<form>
+
+							<div class="form-group row">
+								<label for="taskIDM" class="col-sm-2 col-form-label">Id</label>
+								<div class="col-sm-10">
+									<input type="text" class="form-control" id="taskIDM" readonly="readonly" value="1">
+								</div>
+							</div>
+
+							<div class="form-group row">
+								<label for="taskTitle" class="col-sm-2 col-form-label">Title</label>
+								<div class="col-sm-10">
+									<input type="text" class="form-control" id="taskTitleM" placeholder="Finir le projet" >
+								</div>
+							</div>
+	
+							<div class="form-group row">
+								<label for="taskDateBeginM" class="col-sm-2 col-form-label">DateBegin</label>
+								<div class="col-sm-10">
+									<input type="date" id ="taskDateBeginM" name="bday" max="3000-12-31" min="1000-01-01" class="form-control" >
+								</div>
+							</div>
+	
+							<div class="form-group row">
+								<label for="taskDateEndM" class="col-sm-2 col-form-label">DateEnd</label>
+								<div class="col-sm-10">
+									<input type="date" id ="taskDateEndM" name="bday" max="3000-12-31" min="1000-01-01" class="form-control">
+								</div>
+							</div>
+	
+							<div class="form-group row">
+								<label for="taskStateM" class="col-sm-2 col-form-label">State</label>
+								<div class="col-sm-10">
+									<select class="form-control" id="taskStateM">
+										<option value="running">Running</option>
+										<option value="unknow">Unknow</option>
+										<option value="finished">Finished</option>
+										<option value="cancelled">Cancelled</option>
+										<option value="task requested">Task requested</option>
+									</select>
+								</div>
+							</div>
+	
+							<div class="form-group row">
+								<label for="taskTagM" class="col-sm-2 col-form-label">Tags</label>
+								<div class="col-sm-10">
+									<div class="form-check form-check-inline">
+										<input class="form-check-input" type="checkbox" name="inlineRadioOptions" id="tagOtherM" value="other">
+										<label class="form-check-label" for="tagOtherM">Other</label>
+									</div>
+									<div class="form-check form-check-inline">
+										<input class="form-check-input" type="checkbox" name="inlineRadioOptions" id="tagTestM" value="test">
+										<label class="form-check-label" for="tagTestM">Test</label>
+									</div>
+									<div class="form-check form-check-inline">
+										<input class="form-check-input" type="checkbox" name="inlineRadioOptions" id="tagWebM" value="web">
+										<label class="form-check-label" for="tagWebM">Web</label>
+									</div>
+									<div class="form-check form-check-inline">
+										<input class="form-check-input" type="checkbox" name="inlineRadioOptions" id="tagWorkM" value="work">
+										<label class="form-check-label" for="tagWorkM">Work</label>
+									</div>
+									<div class="form-check form-check-inline">
+										<input class="form-check-input" type="checkbox" name="inlineRadioOptions" id="tagYoupiM" value="youpi">
+										<label class="form-check-label" for="tagYoupiM">Youpi</label>
+									</div>
+								</div>
+							</div>
+							
+						</form>
+					</div>
+					
+					<div class="modal-footer">
+						<button type="button" class="btn btn-success" data-dismiss="modal" onclick="modifyTask()">Modify</button>
+						<button type="button" class="btn btn-danger" data-dismiss="modal">Close</button>
+					</div>
+					
+					</div>
+				</div>
+				</div>
+		
+		</div>
+
+		<!-- SHOW  -->
+		<div class="container">
+			<div class="row">
+
+				<div class="col"></div>
+
+				<div class="col-10">
+
+					<div class="form-group row ">
+						<label for="taskFilter" class="col-sm-3 col-form-label"><h1>Task List: </h1></label>
+						<div class="col-sm-7 my-auto">
+							<div class="input-group ">
+								<select class="custom-select" id="taskFilter">
+									<option value="running" selected>Running tasks</option>
+									<option value="other">Other</option>
+									<option value="test">Test</option>
+									<option value="web">Web</option>
+									<option value="work">Work</option>
+									<option value="youpi">Youpi</option>
+								</select>
+								<div class="input-group-append">
+									<button class="btn btn-outline-secondary" type="button" onclick="filterTask()">Filter</button>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<table class="table" id="taskTabel">
+						<thead>
+							<tr>
+								<th scope="col">ID</th>
+								<th scope="col">Title</th>
+								<th scope="col">DateBegin</th>
+								<th scope="col">DateEnd</th>
+								<th scope="col">State</th>
+								<th scope="col">Tags</th>
+								<th scope="col">Actions</th>
+							</tr>
+						</thead>
+					</table>
+					
+				</div>
+				
+				<div class="col"></div>
+
+			</div>
+		</div>
+
+	</main>
+
+</br>
+</br>
+
+	<footer class="page-footer font-small blue fixed-bottom" style="background-color: #e3f2fd;">
+		<div class="footer-copyright text-center py-3"> 
+			Yohan PERROT - IMR2 ENSSAT Lannion - SOA REST NodeJS Project
+		</div>	  
+	</footer>
+
+
+	<script> 
+		window.onload = setTabel();
+	</script>
+
+  </body>
+</html>

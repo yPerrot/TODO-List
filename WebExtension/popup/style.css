@@ -1,0 +1,25 @@
+html {
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+}
+  
+th, td {
+    padding: 8px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+button {
+    background-color: #555555; color: white;
+    border-radius: 4px;
+}
+
+#b1 {
+    width: 100%;
+    padding: 10px 24px;
+    margin: 0px;
+}
