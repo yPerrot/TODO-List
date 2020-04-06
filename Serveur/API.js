@@ -7,8 +7,8 @@ var mysql = require('mysql');
 var app = express();
 var con = mysql.createConnection({
     host: "localhost",
-    user: "root",
-    password: "admin",
+    user: /*Mysql_userName*/,
+    password: /*Mysql_password*/,
     database : "API_PERROT"
   });
 
