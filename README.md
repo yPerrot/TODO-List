@@ -8,6 +8,7 @@ Intègre également une WebExtension basique de visualisation des tâches couran
 
 ## Installation
 ```js
+$ cd Serveur
 $ npm install
 ```
 
